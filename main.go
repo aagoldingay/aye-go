@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	utils "github.com/aagoldingay/aye-go/utilities"
 	"github.com/globalsign/mgo"
@@ -13,6 +14,23 @@ import (
 
 const alert = "[ALERT] : %v\n"
 const usernameTMPL = "aye-go"
+
+// Voter models voter document insert
+type Voter struct {
+	ID              int
+	ShortIdentifier string
+	HasVoted        bool
+}
+
+// Election models election document insert
+type Election struct {
+	ID                 int
+	StartDate, EndDate time.Time
+	Options            []string
+	IntegrationFormat  string
+}
+
+var db *mgo.Database
 
 func readConfig() ([]string, error) {
 	// initial read
@@ -68,7 +86,8 @@ func main() {
 	}
 
 	utils.Setup(-1)
-	db := sess.DB("ayedb")
+	d := sess.DB("ayedb")
+	db = d
 
 	data, err := readConfig()
 	addNewUser := false
