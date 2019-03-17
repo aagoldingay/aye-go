@@ -23,7 +23,7 @@ func readConfig() ([]string, error) {
 		if err != nil {
 			return []string{}, err
 		}
-		return data, nil
+		return data, errors.New("new user")
 	}
 
 	// successful read
@@ -61,30 +61,24 @@ func writeConfig() ([]string, error) {
 }
 
 func main() {
-	_, err := mgo.Dial("localhost:27017")
+	sess, err := mgo.Dial("localhost:27017")
 	if err != nil && err.Error() == "no reachable servers" {
 		fmt.Printf(alert, "mongodb not installed")
 		os.Exit(1)
 	}
 
 	utils.Setup(-1)
-	// db := sess.DB("ayedb")
-
-	// try reading a config.txt, if not exist, create one + db (if not exists.....)
-	// if config.txt
-	// read, login
-	// else
-	// db.UpsertUser(mgo.User{Username: })
-	// read / update config.txt
+	db := sess.DB("ayedb")
 
 	data, err := readConfig()
 	addNewUser := false
 	if err != nil {
 		if err.Error() == "new user" {
 			addNewUser = true
+		} else {
+			fmt.Printf(alert, err)
+			os.Exit(1)
 		}
-		fmt.Printf(alert, err)
-		os.Exit(1)
 	}
 	if len(data) != 2 {
 		fmt.Printf(alert, "login data not as expected")
@@ -93,10 +87,15 @@ func main() {
 
 	// successful config file
 	if addNewUser {
-		// db.UpsertUser(mgo.User{...})
+		err = db.UpsertUser(&mgo.User{Username: data[0], Password: data[1]})
+		if err != nil {
+			fmt.Printf(alert, err)
+		}
 	}
-	// sess.Login(...)
-
+	err = db.Login(data[0], data[1])
+	if err != nil {
+		fmt.Printf(alert, err)
+	}
 	fmt.Println(data[0])
 	fmt.Println(data[1])
 
