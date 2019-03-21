@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -86,6 +87,15 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// default method = GET
 	if r.Method == "POST" {
 		// write to db
+		r.ParseForm()
+		if r.FormValue("method") == "register" {
+			if md5.Sum([]byte(r.FormValue("password"))) != md5.Sum([]byte(r.FormValue("confirmpassword"))) {
+				http.Error(w, "Problem occurred", http.StatusTeapot)
+			}
+			// TODO register
+		} else {
+			// TODO login
+		}
 	} else {
 		// register to vote page
 		// login info, register to vote button

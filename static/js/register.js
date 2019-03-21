@@ -35,5 +35,6 @@ function register(func) {
                 + "Username (remember this): <input type=\"text\" name=\"username\" value=\"" + generateShortID(8) + "\" disabled/><br>"
                 + "Password: <input type=\"password\" name=\"password\"/><br>"
                 + "Confirm Password: <input type=\"password\" name=\"confirmpassword\"/></br>"
+                + "<input type=\"hidden\" name=\"method\" value=\"register\"/>"
                 + "<input type=\"submit\" value=\"Submit\"/>";
 }
