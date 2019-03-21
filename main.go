@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
 	utils "github.com/aagoldingay/aye-go/utilities"
@@ -13,6 +15,8 @@ import (
 )
 
 const alert = "[ALERT] : %v\n"
+const startup = "[STARTING] : %v\n"
+const stopping = "[STOPPING] : %v\n"
 const usernameTMPL = "aye-go"
 
 // Voter models voter document insert
@@ -78,6 +82,19 @@ func writeConfig() ([]string, error) {
 	return data, nil
 }
 
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	// default method = GET
+	if r.Method == "POST" {
+		// write to db
+	} else {
+		// register to vote page
+		// login info, register to vote button
+		// use js to generate code? then submits to post with password, on success = show shorthand id
+		tmpl := template.Must(template.ParseFiles("static/tmpl/index.html"))
+		tmpl.Execute(w, nil)
+	}
+}
+
 func main() {
 	sess, err := mgo.Dial("localhost:27017")
 	if err != nil && err.Error() == "no reachable servers" {
@@ -118,6 +135,17 @@ func main() {
 	fmt.Println(data[0])
 	fmt.Println(data[1])
 
-	//fmt.Printf(alert, db.Name)
-	//fmt.Println("aye-go")
+	// fmt.Printf(alert, db.Name)
+	// fmt.Println("aye-go")
+
+	// start http service
+	fmt.Printf(startup, "http thread")
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	http.HandleFunc("/", indexHandler)
+
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))
+		os.Exit(1)
+	}
+	fmt.Printf(stopping, "shutting down HTTP")
 }
