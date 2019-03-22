@@ -25,13 +25,6 @@ const startup = "[STARTING] : %v\n"
 const stopping = "[STOPPING] : %v\n"
 const usernameTMPL = "aye-go"
 
-// Voter models voter document insert
-type Voter struct {
-	ID              int
-	ShortIdentifier string
-	HasVoted        bool
-}
-
 // Election models election document insert
 type Election struct {
 	ID                 int
@@ -104,6 +97,14 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			// redirect to thanks (maybe with election start date?)
 		} else {
 			// TODO login
+			prs, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), db)
+			if err != nil {
+				fmt.Printf(alert, err)
+				http.Error(w, "Problem occurred", http.StatusTeapot)
+			}
+			fmt.Printf(alert, prs)
+			// TODO start session
 		}
 	} else {
 		// register to vote page
