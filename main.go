@@ -1,9 +1,10 @@
 package main
 
 import (
-	"crypto/md5"
+	"context"
 	"errors"
 	"fmt"
+	"html"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -11,8 +12,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/aagoldingay/aye-go/data"
+
 	utils "github.com/aagoldingay/aye-go/utilities"
-	"github.com/globalsign/mgo"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 const alert = "[ALERT] : %v\n"
@@ -35,7 +40,7 @@ type Election struct {
 	IntegrationFormat  string
 }
 
-var db *mgo.Database
+var db *mongo.Database
 
 func readConfig() ([]string, error) {
 	// initial read
@@ -89,10 +94,14 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		// write to db
 		r.ParseForm()
 		if r.FormValue("method") == "register" {
-			if md5.Sum([]byte(r.FormValue("password"))) != md5.Sum([]byte(r.FormValue("confirmpassword"))) {
+			// TODO register
+			err := data.Register(html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), db)
+			if err != nil {
+				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
 			}
-			// TODO register
+			// redirect to thanks (maybe with election start date?)
 		} else {
 			// TODO login
 		}
@@ -106,47 +115,41 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	sess, err := mgo.Dial("localhost:27017")
-	if err != nil && err.Error() == "no reachable servers" {
-		fmt.Printf(alert, "mongodb not installed")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		fmt.Printf(alert, fmt.Sprintf("connect err = %v", err))
 		os.Exit(1)
 	}
+	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		fmt.Printf(alert, fmt.Sprintf("ping err = %v", err))
+		os.Exit(1)
+	}
+
+	db = client.Database("aye-go")
 
 	utils.Setup(-1)
-	d := sess.DB("ayedb")
-	db = d
 
-	data, err := readConfig()
-	addNewUser := false
-	if err != nil {
-		if err.Error() == "new user" {
-			addNewUser = true
-		} else {
-			fmt.Printf(alert, err)
-			os.Exit(1)
-		}
-	}
-	if len(data) != 2 {
-		fmt.Printf(alert, "login data not as expected")
-		os.Exit(1)
-	}
-
-	// successful config file
-	if addNewUser {
-		err = db.UpsertUser(&mgo.User{Username: data[0], Password: data[1]})
-		if err != nil {
-			fmt.Printf(alert, err)
-		}
-	}
-	err = db.Login(data[0], data[1])
-	if err != nil {
-		fmt.Printf(alert, err)
-	}
-	fmt.Println(data[0])
-	fmt.Println(data[1])
-
-	// fmt.Printf(alert, db.Name)
-	// fmt.Println("aye-go")
+	// data, err := readConfig()
+	// addNewUser := false
+	// if err != nil {
+	// 	if err.Error() == "new user" {
+	// 		addNewUser = true
+	// 	} else {
+	// 		fmt.Printf(alert, err)
+	// 		os.Exit(1)
+	// 	}
+	// }
+	// if len(data) != 2 {
+	// 	fmt.Printf(alert, "login data not as expected")
+	// 	os.Exit(1)
+	// }
 
 	// start http service
 	fmt.Printf(startup, "http thread")
@@ -157,5 +160,4 @@ func main() {
 		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))
 		os.Exit(1)
 	}
-	fmt.Printf(stopping, "shutting down HTTP")
 }
