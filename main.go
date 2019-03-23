@@ -33,7 +33,7 @@ type Election struct {
 	IntegrationFormat  string
 }
 
-var db *mongo.Database
+var mdbClient *mongo.Client
 
 func readConfig() ([]string, error) {
 	// initial read
@@ -89,7 +89,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("method") == "register" {
 			// TODO register
 			err := data.Register(html.EscapeString(r.FormValue("username")),
-				html.EscapeString(r.FormValue("password")), db)
+				html.EscapeString(r.FormValue("password")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
@@ -97,13 +97,20 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			// redirect to thanks (maybe with election start date?)
 		} else {
 			// TODO login
-			prs, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
-				html.EscapeString(r.FormValue("password")), db)
+			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
 			}
-			fmt.Printf(alert, prs)
+			fmt.Printf(alert, resp)
+			if !resp.Success {
+				http.Error(w, "Unsuccessful login", http.StatusTeapot)
+			}
+			if resp.HasVoted {
+				http.Error(w, "Already voted", http.StatusTeapot)
+			}
+			// fmt.Printf(alert, resp.ObjectID)
 			// TODO start session
 		}
 	} else {
@@ -132,8 +139,8 @@ func main() {
 		fmt.Printf(alert, fmt.Sprintf("ping err = %v", err))
 		os.Exit(1)
 	}
-
-	db = client.Database("aye-go")
+	mdbClient = client
+	//db = client.Database("aye-go")
 
 	utils.Setup(-1)
 
