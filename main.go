@@ -33,7 +33,11 @@ type Election struct {
 	IntegrationFormat  string
 }
 
-var mdbClient *mongo.Client
+var (
+	mdbClient *mongo.Client
+	// sessionKey = []byte{35, 250, 103, 131, 245, 255, 194, 76, 198, 188, 157, 217, 82, 104, 157, 5}
+	// store      *sessions.CookieStore
+)
 
 func readConfig() ([]string, error) {
 	// initial read
@@ -81,29 +85,62 @@ func writeConfig() ([]string, error) {
 	return data, nil
 }
 
+func adminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		// first visit
+		tmpl := template.Must(template.ParseFiles("static/tmpl/admin.html"))
+		data := struct {
+			Loggedin bool
+		}{
+			false,
+		}
+		tmpl.Execute(w, data)
+	} else {
+		r.ParseForm()
+		if r.FormValue("newelection") == "true" {
+
+			// TODO election setup
+			// ... election in progress (maybe return end date??)
+
+		} else {
+			if r.FormValue("username") == "" || r.FormValue("password") == "" {
+				http.Error(w, "Check credentials", http.StatusTeapot)
+				return
+			}
+			resp, err := data.LoginAdmin(html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), mdbClient)
+			if err != nil {
+				fmt.Printf(alert, err)
+				http.Error(w, "Problem occurred", http.StatusTeapot)
+			}
+			if !resp.Success {
+				http.Error(w, "Unsuccessful login", http.StatusTeapot)
+			}
+			// TODO session
+
+		}
+	}
+}
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// default method = GET
 	if r.Method == "POST" {
-		// write to db
 		r.ParseForm()
 		if r.FormValue("method") == "register" {
-			// TODO register
 			err := data.Register(html.EscapeString(r.FormValue("username")),
 				html.EscapeString(r.FormValue("password")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
 			}
-			// redirect to thanks (maybe with election start date?)
+			// TODO redirect to thanks (maybe with election start date?)
 		} else {
-			// TODO login
 			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
 				html.EscapeString(r.FormValue("password")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
 			}
-			fmt.Printf(alert, resp)
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
 			}
@@ -114,9 +151,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			// TODO start session
 		}
 	} else {
-		// register to vote page
-		// login info, register to vote button
-		// use js to generate code? then submits to post with password, on success = show shorthand id
 		tmpl := template.Must(template.ParseFiles("static/tmpl/index.html"))
 		tmpl.Execute(w, nil)
 	}
@@ -163,6 +197,7 @@ func main() {
 	fmt.Printf(startup, "http thread")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/admin", adminHandler)
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))

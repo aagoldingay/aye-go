@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Aye - Admin</title>
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1">-->
+    <!-- <link rel="stylesheet" type="text/css" href="static/css/index.css" /> -->
+    <!--<script src="main.js"></script>-->
+</head>
+<body>
+    <h1>Aye - Admin Login</h1>
+    <form action="/admin" method="POST">
+        {{if .Loggedin}}
+            <input type="hidden" name="newelection" value="true"/>
+        {{else}}
+            Username: <input type="text" name="username"/><br>
+            Password: <input type="password" name="password"/><br>
+        {{end}}
+        <input type="submit" value="Submit"/>
+    </form>
+</body>
+</html>

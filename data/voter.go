@@ -12,8 +12,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// Voter models voter document insert
-type Voter struct {
+// voter models voter document insert
+type voter struct {
 	Username string
 	HasVoted bool
 	Password string
@@ -28,14 +28,14 @@ type VoterLogin struct {
 
 // LoginVoter checks that a user has an account
 func LoginVoter(username, password string, dbc *mongo.Client) (VoterLogin, error) {
-	result := Voter{}
+	result := voter{}
 	err := dbc.Database("aye-go").Collection("voter").
 		FindOne(context.Background(), bson.M{"username": username}).Decode(&result)
 	if err != nil {
 		return VoterLogin{false, false, ""}, err
 	}
 	hashpass := md5.Sum([]byte(password + result.Hash))
-	if username != result.Username && result.Password != fmt.Sprintf("%x", hashpass) {
+	if result.Password != fmt.Sprintf("%x", hashpass) {
 		return VoterLogin{false, false, ""}, nil
 	}
 	return VoterLogin{true, result.HasVoted, result.Username}, nil
