@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aagoldingay/aye-go/data"
+	"github.com/gorilla/sessions"
 
 	utils "github.com/aagoldingay/aye-go/utilities"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -27,9 +28,9 @@ const stopping = "[STOPPING] : %v\n"
 const usernameTMPL = "aye-go"
 
 var (
-	mdbClient *mongo.Client
-	// sessionKey = []byte{35, 250, 103, 131, 245, 255, 194, 76, 198, 188, 157, 217, 82, 104, 157, 5}
-	// store      *sessions.CookieStore
+	mdbClient  *mongo.Client
+	sessionKey = []byte{35, 250, 103, 131, 245, 255, 194, 76, 198, 188, 157, 217, 82, 104, 157, 5}
+	store      *sessions.CookieStore
 )
 
 func readConfig() ([]string, error) {
@@ -89,9 +90,15 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		tmpl.Execute(w, data)
 	} else {
+		session, _ := store.Get(r, "cookie-name")
 		r.ParseForm()
 		if r.FormValue("newelection") == "true" {
 			// TODO election in progress (maybe return end date??)
+			if admin, err := data.CheckAdmin(session.Values["id"].(string), mdbClient); !admin || err != nil {
+				http.Error(w, "Problem or not admin", http.StatusTeapot)
+				return
+			}
+
 			t := html.EscapeString(r.FormValue("title"))
 			numOpts, _ := strconv.ParseInt(r.FormValue("numOptions"), 10, 32)
 			opts := []string{}
@@ -117,7 +124,8 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
 			}
 
-			// TODO session
+			session.Values["id"] = resp.ID
+			session.Save(r, w)
 
 			// reload page with loggedin = true
 			tmpl := template.Must(template.ParseFiles("static/tmpl/admin.html"))
@@ -144,6 +152,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			// TODO redirect to thanks (maybe with election start date?)
 		} else {
+			session, _ := store.Get(r, "cookie-name")
 			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
 				html.EscapeString(r.FormValue("password")), mdbClient)
 			if err != nil {
@@ -156,8 +165,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			if resp.HasVoted {
 				http.Error(w, "Already voted", http.StatusTeapot)
 			}
-			// fmt.Printf(alert, resp.ObjectID)
-			// TODO start session
+
+			session.Values["id"] = resp.ID
+			session.Save(r, w)
 		}
 	} else {
 		tmpl := template.Must(template.ParseFiles("static/tmpl/index.html"))
@@ -204,6 +214,7 @@ func main() {
 
 	// start http service
 	fmt.Printf(startup, "http thread")
+	store = sessions.NewCookieStore(sessionKey)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/admin", adminHandler)

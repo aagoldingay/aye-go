@@ -7,26 +7,45 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // admin models admin document
 type admin struct {
+	ID                       *primitive.ObjectID `bson:"_id,omitempty"`
 	Username, Password, Hash string
 }
 
 // AdminLogin declares whether admin loggin in successfully
 type AdminLogin struct {
-	Success  bool
-	Username string
+	Success bool
+	ID      string
 }
 
 // Election models election document insert
 type Election struct {
+	// ID                 *primitive.ObjectID `bson:"_id,omitempty"`
 	Title              string
 	StartDate, EndDate int64
 	Options            []string
+}
+
+// CheckAdmin confirms if user is an admin
+func CheckAdmin(id string, dbc *mongo.Client) (bool, error) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return false, err
+	}
+	r := dbc.Database("aye-go").Collection("admin").FindOne(context.Background(), bson.M{"_id": oid})
+	if r.Err() != nil {
+		if r.Err() == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // CreateElection parses form input and adds to the database
@@ -56,6 +75,10 @@ func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.
 		if err != nil {
 			return err
 		}
+		// if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
+		// 	e := Election{ID: &oid}
+		// 	fmt.Println(e)
+		// }
 
 		// COMMIT
 		err = sctx.CommitTransaction(sctx)
@@ -82,5 +105,5 @@ func LoginAdmin(username, password string, dbc *mongo.Client) (AdminLogin, error
 	if result.Password != fmt.Sprintf("%x", hashpass) {
 		return AdminLogin{false, ""}, nil
 	}
-	return AdminLogin{true, result.Username}, nil
+	return AdminLogin{true, result.ID.Hex()}, nil
 }

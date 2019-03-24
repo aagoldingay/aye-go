@@ -8,22 +8,23 @@ import (
 
 	utils "github.com/aagoldingay/aye-go/utilities"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // voter models voter document insert
 type voter struct {
-	Username string
-	HasVoted bool
-	Password string
-	Hash     string
+	ID             *primitive.ObjectID `bson:"_id,omitempty"`
+	Username       string
+	HasVoted       bool
+	Password, Hash string
 }
 
 // VoterLogin declares whether voter logged in successfully and has voted
 type VoterLogin struct {
 	Success, HasVoted bool
-	Username          string
+	ID                string
 }
 
 // LoginVoter checks that a user has an account
@@ -38,7 +39,7 @@ func LoginVoter(username, password string, dbc *mongo.Client) (VoterLogin, error
 	if result.Password != fmt.Sprintf("%x", hashpass) {
 		return VoterLogin{false, false, ""}, nil
 	}
-	return VoterLogin{true, result.HasVoted, result.Username}, nil
+	return VoterLogin{true, result.HasVoted, result.ID.Hex()}, nil
 }
 
 // Register adds new voters to the database
