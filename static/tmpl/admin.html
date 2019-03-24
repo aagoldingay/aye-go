@@ -6,13 +6,20 @@
     <title>Aye - Admin</title>
     <!--<meta name="viewport" content="width=device-width, initial-scale=1">-->
     <!-- <link rel="stylesheet" type="text/css" href="static/css/index.css" /> -->
-    <!--<script src="main.js"></script>-->
+    <script src="static/js/electionSetup.js"></script>
 </head>
 <body>
     <h1>Aye - Admin Login</h1>
     <form action="/admin" method="POST">
         {{if .Loggedin}}
             <input type="hidden" name="newelection" value="true"/>
+            Start Date: <input type="date" name="startdate"/><br>
+            End Date: <input type="date" name="enddate"/><br>
+            <input id="numOptions" type="hidden" name="numOptions" value="1"/>
+            Options: <div id="options">
+                <input type="text" name="option-1"/><br>
+            </div>
+            <input type="button" onclick="addOption()" value="Add Option"/><br>
         {{else}}
             Username: <input type="text" name="username"/><br>
             Password: <input type="password" name="password"/><br>

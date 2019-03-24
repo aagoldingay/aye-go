@@ -116,8 +116,17 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
 			}
+
 			// TODO session
 
+			// reload page with loggedin = true
+			tmpl := template.Must(template.ParseFiles("static/tmpl/admin.html"))
+			data := struct {
+				Loggedin bool
+			}{
+				true,
+			}
+			tmpl.Execute(w, data)
 		}
 	}
 }
