@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -24,14 +25,6 @@ const alert = "[ALERT] : %v\n"
 const startup = "[STARTING] : %v\n"
 const stopping = "[STOPPING] : %v\n"
 const usernameTMPL = "aye-go"
-
-// Election models election document insert
-type Election struct {
-	ID                 int
-	StartDate, EndDate time.Time
-	Options            []string
-	IntegrationFormat  string
-}
 
 var (
 	mdbClient *mongo.Client
@@ -98,10 +91,17 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.ParseForm()
 		if r.FormValue("newelection") == "true" {
-
-			// TODO election setup
-			// ... election in progress (maybe return end date??)
-
+			// TODO election in progress (maybe return end date??)
+			t := html.EscapeString(r.FormValue("title"))
+			numOpts, _ := strconv.ParseInt(r.FormValue("numOptions"), 10, 32)
+			opts := []string{}
+			for i := 1; i <= int(numOpts); i++ {
+				opts = append(opts, html.EscapeString(r.FormValue(
+					fmt.Sprintf("option-%v", i))))
+			}
+			sd := r.FormValue("startdate")
+			ed := r.FormValue("enddate")
+			data.CreateElection(t, sd, ed, opts, mdbClient)
 		} else {
 			if r.FormValue("username") == "" || r.FormValue("password") == "" {
 				http.Error(w, "Check credentials", http.StatusTeapot)

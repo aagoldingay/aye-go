@@ -10,9 +10,10 @@
 </head>
 <body>
     <h1>Aye - Admin Login</h1>
-    <form action="/admin" method="POST">
+    <form id="form" action="/admin" method="POST" onsubmit="return preSubmit();">
         {{if .Loggedin}}
-            <input type="hidden" name="newelection" value="true"/>
+            <input id="newelection" type="hidden" name="newelection" value="true"/>
+            Title: <input type="text" name="title"/><br>
             Start Date: <input type="date" name="startdate"/><br>
             End Date: <input type="date" name="enddate"/><br>
             <input id="numOptions" type="hidden" name="numOptions" value="1"/>
