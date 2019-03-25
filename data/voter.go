@@ -58,7 +58,10 @@ func Register(username, password string, dbc *mongo.Client) error {
 		salt := utils.GenerateCode(5)
 		hashpass := md5.Sum([]byte(password + salt))
 		_, err = db.Collection("voter").InsertOne(context.Background(),
-			bson.M{"username": username, "hasVoted": false, "password": fmt.Sprintf("%x", hashpass), "hash": salt})
+			bson.D{{Key: "username", Value: username},
+				{Key: "hasVoted", Value: false},
+				{Key: "password", Value: fmt.Sprintf("%x", hashpass)},
+				{Key: "hash", Value: salt}})
 
 		if err != nil {
 			return err

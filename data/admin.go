@@ -57,8 +57,12 @@ func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.
 	ed := d.Unix()
 	//sd, _ := strconv.ParseInt(startdate, 10, 64)
 	//ed, _ := strconv.ParseInt(enddate, 10, 64)
+
 	// compile document
-	doc := bson.M{"title": title, "start-date": sd, "end-date": ed, "options": opts}
+	doc := bson.D{{Key: "title", Value: title},
+		{Key: "start-date", Value: sd},
+		{Key: "end-date", Value: ed},
+		{Key: "options", Value: opts}}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
