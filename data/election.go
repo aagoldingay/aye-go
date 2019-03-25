@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -67,7 +66,6 @@ func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.
 		}
 		if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
 			e = Election{ID: &oid, Title: title, StartDate: sdp, EndDate: edp}
-			fmt.Println(e)
 		}
 		return nil
 	})

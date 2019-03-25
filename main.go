@@ -169,6 +169,17 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Problem occurred", http.StatusTeapot)
 			}
 			// TODO redirect to thanks (maybe with election start date?)
+			tmpl := template.Must(template.ParseFiles("static/tmpl/thanks.html"))
+			sd := "To be confirmed"
+			if !currentElection.StartDate.IsZero() {
+				sd = currentElection.StartDate.Format("2006-01-02")
+			}
+			data := struct {
+				StartDate string
+			}{
+				sd,
+			}
+			tmpl.Execute(w, data)
 		} else {
 			session, _ := store.Get(r, "cookie-name")
 			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
@@ -186,6 +197,24 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 			session.Values["id"] = resp.ID
 			session.Save(r, w)
+
+			tmpl := template.Must(template.ParseFiles("static/tmpl/election.html"))
+			sd := "To be confirmed"
+			started := false
+			if !currentElection.StartDate.IsZero() {
+				if time.Now().After(currentElection.StartDate) {
+					started = true
+				}
+				sd = currentElection.StartDate.Format("2006-01-02")
+			}
+			data := struct {
+				Started   bool
+				StartDate string
+			}{
+				started,
+				sd,
+			}
+			tmpl.Execute(w, data)
 		}
 	} else {
 		tmpl := template.Must(template.ParseFiles("static/tmpl/index.html"))
