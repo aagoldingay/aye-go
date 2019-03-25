@@ -4,12 +4,10 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // admin models admin document
@@ -22,14 +20,6 @@ type admin struct {
 type AdminLogin struct {
 	Success bool
 	ID      string
-}
-
-// Election models election document insert
-type Election struct {
-	// ID                 *primitive.ObjectID `bson:"_id,omitempty"`
-	Title              string
-	StartDate, EndDate int64
-	Options            []string
 }
 
 // CheckAdmin confirms if user is an admin
@@ -46,55 +36,6 @@ func CheckAdmin(id string, dbc *mongo.Client) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// CreateElection parses form input and adds to the database
-func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.Client) error {
-	// parse dates
-	d, _ := time.Parse("2006-01-02", startdate)
-	sd := d.Unix()
-	d, _ = time.Parse("2006-01-02", enddate)
-	ed := d.Unix()
-	//sd, _ := strconv.ParseInt(startdate, 10, 64)
-	//ed, _ := strconv.ParseInt(enddate, 10, 64)
-
-	// compile document
-	doc := bson.D{{Key: "title", Value: title},
-		{Key: "start-date", Value: sd},
-		{Key: "end-date", Value: ed},
-		{Key: "options", Value: opts}}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	db := dbc.Database("aye-go")
-	err := dbc.UseSession(ctx, func(sctx mongo.SessionContext) error {
-		// START
-		err := sctx.StartTransaction(options.Transaction())
-		if err != nil {
-			return err
-		}
-
-		// CODE
-		_, err = db.Collection("election").InsertOne(context.Background(), doc)
-		if err != nil {
-			return err
-		}
-		// if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
-		// 	e := Election{ID: &oid}
-		// 	fmt.Println(e)
-		// }
-
-		// COMMIT
-		err = sctx.CommitTransaction(sctx)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // LoginAdmin checks that an admin typed the correct credentials to their corresponding account

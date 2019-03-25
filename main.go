@@ -28,9 +28,10 @@ const stopping = "[STOPPING] : %v\n"
 const usernameTMPL = "aye-go"
 
 var (
-	mdbClient  *mongo.Client
-	sessionKey = []byte{35, 250, 103, 131, 245, 255, 194, 76, 198, 188, 157, 217, 82, 104, 157, 5}
-	store      *sessions.CookieStore
+	mdbClient       *mongo.Client
+	sessionKey      = []byte{35, 250, 103, 131, 245, 255, 194, 76, 198, 188, 157, 217, 82, 104, 157, 5}
+	store           *sessions.CookieStore
+	currentElection data.Election
 )
 
 func readConfig() ([]string, error) {
@@ -85,8 +86,10 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		tmpl := template.Must(template.ParseFiles("static/tmpl/admin.html"))
 		data := struct {
 			Loggedin bool
+			Enabled  string
 		}{
 			false,
+			"",
 		}
 		tmpl.Execute(w, data)
 	} else {
@@ -108,7 +111,14 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			sd := r.FormValue("startdate")
 			ed := r.FormValue("enddate")
-			data.CreateElection(t, sd, ed, opts, mdbClient)
+			e, err := data.CreateElection(t, sd, ed, opts, mdbClient)
+			if err != nil {
+				fmt.Printf(alert, err)
+				http.Error(w, "Problem creating new election", http.StatusTeapot)
+				return
+			}
+			currentElection = e
+
 		} else {
 			if r.FormValue("username") == "" || r.FormValue("password") == "" {
 				http.Error(w, "Check credentials", http.StatusTeapot)
@@ -129,10 +139,18 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 
 			// reload page with loggedin = true
 			tmpl := template.Must(template.ParseFiles("static/tmpl/admin.html"))
+
+			// prevent form submission if currentElection populated and Now < enddate
+			disabled := ""
+			if !currentElection.EndDate.IsZero() || !time.Now().After(currentElection.EndDate) {
+				disabled = "disabled"
+			}
 			data := struct {
 				Loggedin bool
+				Enabled  string
 			}{
 				true,
+				disabled,
 			}
 			tmpl.Execute(w, data)
 		}
@@ -214,6 +232,16 @@ func main() {
 
 	// start http service
 	fmt.Printf(startup, "http thread")
+
+	// get current election
+	currentElection, err = data.GetCurrentElection(mdbClient)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			fmt.Printf(alert, err)
+			os.Exit(1)
+		}
+	}
+
 	store = sessions.NewCookieStore(sessionKey)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	http.HandleFunc("/", indexHandler)
