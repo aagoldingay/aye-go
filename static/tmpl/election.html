@@ -9,7 +9,21 @@
     <!-- <script src="static/js/electionSetup.js"></script> -->
 </head>
 <body>
+    {{$os := .Options}}
     {{if .Started}}
+        <h2>{{.Title}}</h2>
+        <p>Deadline: {{.EndDate}}</p>
+        <form method="POST" action="/submitvote">
+            <input type="hidden" name="election" value="{{.ID}}"/>
+            <div class="options">
+                {{range $o := $os}}
+                <input type="radio" name="option" value="{{$o}}">{{$o}}<br>
+                {{end}}
+            </div>
+            Username: <input type="text" name="username"/><br>
+            Safeword: <input type="password" name="safeword"/><br>
+            <input type="submit" valu="Submit"/>
+        </form>
     {{else}}
         <p>Start Date: {{.StartDate}}</p>
     {{end}}

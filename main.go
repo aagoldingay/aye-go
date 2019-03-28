@@ -157,18 +157,45 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func submitVoteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		r.ParseForm()
+
+		// confirm electionID hasnt changed - reject if true
+		if r.FormValue("election") != currentElection.ID.Hex() {
+			http.Error(w, "Problem occured", http.StatusTeapot)
+			return
+		}
+
+		// confirm voter is a voter
+		session, _ := store.Get(r, "cookie-name")
+		voter, err := data.CheckVoter(session.Values["id"].(string), r.FormValue("safeword"), mdbClient)
+		if voter.HasVoted {
+			if err != nil {
+				fmt.Printf(alert, err)
+			}
+			http.Error(w, "No authorisation", http.StatusTeapot)
+			return
+		}
+		fmt.Println(voter.Coerced)
+		http.Error(w, "got this far", http.StatusTeapot)
+		return
+	}
+}
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// default method = GET
 	if r.Method == "POST" {
 		r.ParseForm()
 		if r.FormValue("method") == "register" {
 			err := data.Register(html.EscapeString(r.FormValue("username")),
-				html.EscapeString(r.FormValue("password")), mdbClient)
+				html.EscapeString(r.FormValue("password")),
+				html.EscapeString(r.FormValue("safeword")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
 			}
-			// TODO redirect to thanks (maybe with election start date?)
+
 			tmpl := template.Must(template.ParseFiles("static/tmpl/thanks.html"))
 			sd := "To be confirmed"
 			if !currentElection.StartDate.IsZero() {
@@ -200,19 +227,26 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 			tmpl := template.Must(template.ParseFiles("static/tmpl/election.html"))
 			sd := "To be confirmed"
+			ed := "To be confirmed"
 			started := false
 			if !currentElection.StartDate.IsZero() {
 				if time.Now().After(currentElection.StartDate) {
 					started = true
 				}
 				sd = currentElection.StartDate.Format("2006-01-02")
+				ed = currentElection.EndDate.Format("2006-01-02")
 			}
 			data := struct {
-				Started   bool
-				StartDate string
+				Started                       bool
+				ID, StartDate, Title, EndDate string
+				Options                       []string
 			}{
-				started,
-				sd,
+				Started:   started,
+				ID:        currentElection.ID.Hex(),
+				StartDate: sd,
+				Title:     currentElection.Title,
+				EndDate:   ed,
+				Options:   currentElection.Options,
 			}
 			tmpl.Execute(w, data)
 		}
@@ -275,6 +309,8 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/admin", adminHandler)
+	http.HandleFunc("/submitvote", submitVoteHandler)
+	//http.HandleFunc("/live", pubRecordHandler)
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))

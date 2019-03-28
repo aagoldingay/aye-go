@@ -35,7 +35,9 @@ function register() {
         + "<p>" + code + "</p>" 
         + "Username (remember this): <input type=\"text\" name=\"username\" value=\"" + generateShortID(8) + "\" readonly/><br>"
         + "Password: <input type=\"password\" name=\"password\"/><br>"
-        + "Confirm Password: <input type=\"password\" name=\"confirmpassword\"/></br>"
+        + "Confirm Password: <input type=\"password\" name=\"confirmpassword\"/><br>"
+        + "Safeword: <input type=\"password\" name=\"safeword\"/> (used to prove you were not coerced when voting)</br>"
+        + "Confirm Safeword: <input type=\"password\" name=\"confirmsafeword\"/><br>"
         + "<input type=\"hidden\" name=\"method\" value=\"register\"/>"
         + "<input type=\"submit\" value=\"Submit\"/>";
 }
@@ -45,7 +47,9 @@ function preSubmit() {
     var frm = document.getElementById("form");
     var pass = frm.children[4].value;
     var confpass = frm.children[6].value;
-    if ((pass == "" || confpass == "") || pass != confpass) {
+    var sw = frm.children[8].value;
+    var csw = frm.children[10].value;
+    if ((pass == "" || confpass == "" || sw == "" || csw == "") || pass != confpass || sw != csw) {
         return false;
     }
     return true;

@@ -27,6 +27,24 @@ type election struct {
 	Options   []string            `bson:"options"`
 }
 
+type result struct {
+	Identifier string
+	option     string
+	coerced    bool
+}
+
+// AddResult adds the selected voter preference to current election
+func AddResult(voterID, electionID, info1, info2, option string, dbc *mongo.Client) (bool, error) {
+	// u, _ := primitive.ObjectIDFromHex(voterId)
+	// e, _ := primitive.ObjectIDFromHex(electionId)
+
+	// hash info1 and 2
+
+	// update results with has and selected option
+
+	return false, nil
+}
+
 // CreateElection parses form input and adds to the database
 func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.Client) (Election, error) {
 	// parse dates
