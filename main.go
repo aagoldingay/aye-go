@@ -157,6 +157,13 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+	session.Values["id"] = ""
+	session.Save(r, w)
+	http.Error(w, "Logged out", http.StatusOK)
+}
+
 func submitVoteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		r.ParseForm()
@@ -325,6 +332,7 @@ func main() {
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/admin", adminHandler)
 	http.HandleFunc("/submitvote", submitVoteHandler)
+	http.HandleFunc("/logout", logoutHandler)
 	//http.HandleFunc("/live", pubRecordHandler)
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
