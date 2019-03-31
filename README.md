@@ -6,3 +6,5 @@ Programmed in Go 1.11.x
 Requirements:
 
 - mongodb
+
+- ```go get go.mongodb.org/mongo-driver/mongo```
