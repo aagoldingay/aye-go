@@ -177,8 +177,22 @@ func submitVoteHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No authorisation", http.StatusTeapot)
 			return
 		}
-		fmt.Println(voter.Coerced)
-		http.Error(w, "got this far", http.StatusTeapot)
+		// fmt.Println(voter.Coerced)
+		// http.Error(w, "got this far", http.StatusTeapot)
+		// return
+		ok, err := data.AddResult(session.Values["id"].(string), currentElection.ID.Hex(), r.FormValue("username"), r.FormValue("safeword"), r.FormValue("option"), voter.Coerced, mdbClient)
+		if err != nil {
+			fmt.Printf(alert, err)
+			http.Error(w, "Problem occurred", http.StatusTeapot)
+			return
+		}
+		if !ok {
+			http.Error(w, "Problem occurred", http.StatusTeapot)
+			return
+		}
+
+		// tmpl thanks
+		http.Error(w, "Thanks", http.StatusOK)
 		return
 	}
 }
@@ -214,6 +228,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
+				return
 			}
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)

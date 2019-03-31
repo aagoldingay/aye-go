@@ -2,7 +2,9 @@ package data
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -34,15 +36,38 @@ type result struct {
 }
 
 // AddResult adds the selected voter preference to current election
-func AddResult(voterID, electionID, info1, info2, option string, dbc *mongo.Client) (bool, error) {
-	// u, _ := primitive.ObjectIDFromHex(voterId)
-	// e, _ := primitive.ObjectIDFromHex(electionId)
+func AddResult(voterID, electionID, info1, info2, option string, coerced bool, dbc *mongo.Client) (bool, error) {
+	u, _ := primitive.ObjectIDFromHex(voterID)
+	e, _ := primitive.ObjectIDFromHex(electionID)
 
 	// hash info1 and 2
+	newID := fmt.Sprintf("%x", md5.Sum([]byte(info1+info2)))
 
 	// update results with has and selected option
+	_, err := dbc.Database("aye-go").Collection("election").UpdateOne(context.Background(),
+		bson.M{"_id": e},
+		bson.D{
+			{Key: "$push", Value: bson.D{
+				{Key: "result", Value: bson.D{
+					{Key: "identifier", Value: newID},
+					{Key: "option", Value: option},
+					{Key: "coerced", Value: coerced},
+				}},
+			}}})
 
-	return false, nil
+	if err != nil {
+		return false, err
+	}
+
+	// update voter (hasVoted = true)
+	_, err = dbc.Database("aye-go").Collection("voter").UpdateOne(context.Background(),
+		bson.M{"_id": u},
+		bson.M{"$set": bson.M{"hasVoted": true}})
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // CreateElection parses form input and adds to the database
