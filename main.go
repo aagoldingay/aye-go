@@ -129,9 +129,11 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
+				return
 			}
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
+				return
 			}
 
 			session.Values["id"] = resp.ID
@@ -153,6 +155,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				disabled,
 			}
 			tmpl.Execute(w, data)
+			return
 		}
 	}
 }

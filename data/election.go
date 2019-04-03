@@ -21,8 +21,8 @@ type Election struct {
 	Options            []string
 }
 
-// Results models returned information from database
-type Results struct {
+// results models returned information from database
+type results struct {
 	ID     *primitive.ObjectID `bson:"_id,omitempty"`
 	Result []Result
 }
@@ -116,34 +116,27 @@ func GetOneResult(electionID, username, safeword string, dbc *mongo.Client) ([]R
 func GetResults(electionID string, dbc *mongo.Client) ([]Result, error) {
 	e, _ := primitive.ObjectIDFromHex(electionID)
 
-	cur, err := dbc.Database("aye-go").Collection("election").Aggregate(context.Background(), bson.A{
-		bson.M{"$match": bson.M{"_id": e}},                                             // election
-		bson.M{"$unwind": bson.M{"path": "$result"}},                                   // separate array of results
-		bson.M{"$match": bson.M{"result.coerced": false}},                              // find only valid results
-		bson.M{"$group": bson.M{"_id": "$_id", "result": bson.M{"$push": "$result"}}}}) // regroup array
-	cur.Close(context.Background())
+	cur, err := dbc.Database("aye-go").Collection("election").Aggregate(context.Background(), []bson.M{
+		bson.M{"$match": bson.M{"_id": e}},                                            // election
+		bson.M{"$unwind": bson.M{"path": "$result"}},                                  // separate array of results
+		bson.M{"$match": bson.M{"result.coerced": false}},                             // find only valid results
+		bson.M{"$group": bson.M{"_id": "$_id", "result": bson.M{"$push": "$result"}}}, // regroup array
+	})
 	if err != nil {
 		return []Result{}, err
 	}
-	r := Results{}
-	cur.Decode(r)
-	// results := []Result{}
-	// for cur.Next(context.Background()) {
-	// 	var r Result
-	// 	fmt.Println(cur.Current)
-	// 	err := cur.Decode(&r)
-	// 	if err != nil {
-	// 		return []Result{}, err
-	// 	}
-	// 	results = append(results, r)
-	// }
 
+	r := results{}
+	for cur.Next(context.Background()) {
+		cur.Decode(&r)
+	}
+
+	cur.Close(context.Background())
 	if err := cur.Err(); err != nil {
 		return []Result{}, err
 	}
 
-	fmt.Println(r)
-	return []Result{}, nil
+	return r.Result, nil
 }
 
 // CreateElection parses form input and adds to the database
