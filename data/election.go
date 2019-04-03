@@ -43,30 +43,55 @@ func AddResult(voterID, electionID, info1, info2, option string, coerced bool, d
 	// hash info1 and 2
 	newID := fmt.Sprintf("%x", md5.Sum([]byte(info1+info2)))
 
-	// update results with has and selected option
-	_, err := dbc.Database("aye-go").Collection("election").UpdateOne(context.Background(),
-		bson.M{"_id": e},
-		bson.D{
-			{Key: "$push", Value: bson.D{
-				{Key: "result", Value: bson.D{
-					{Key: "identifier", Value: newID},
-					{Key: "option", Value: option},
-					{Key: "coerced", Value: coerced},
-				}},
-			}}})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	db := dbc.Database("aye-go")
+
+	err := dbc.UseSession(ctx, func(sctx mongo.SessionContext) error {
+		// START
+		err := sctx.StartTransaction(options.Transaction())
+		if err != nil {
+			return err
+		}
+
+		// CODE
+		// update results with has and selected option
+		_, err = db.Collection("election").UpdateOne(context.Background(),
+			bson.M{"_id": e},
+			bson.D{
+				{Key: "$push", Value: bson.D{
+					{Key: "result", Value: bson.D{
+						{Key: "identifier", Value: newID},
+						{Key: "option", Value: option},
+						{Key: "coerced", Value: coerced},
+					}},
+				}}})
+
+		if err != nil {
+			return err
+		}
+
+		// update voter (hasVoted = true)
+		_, err = db.Collection("voter").UpdateOne(context.Background(),
+			bson.M{"_id": u},
+			bson.M{"$set": bson.M{"hasVoted": true}})
+
+		if err != nil {
+			return err
+		}
+
+		// COMMIT
+		err = sctx.CommitTransaction(sctx)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 	if err != nil {
 		return false, err
 	}
 
-	// update voter (hasVoted = true)
-	_, err = dbc.Database("aye-go").Collection("voter").UpdateOne(context.Background(),
-		bson.M{"_id": u},
-		bson.M{"$set": bson.M{"hasVoted": true}})
-
-	if err != nil {
-		return false, err
-	}
 	return true, nil
 }
 
