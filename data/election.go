@@ -86,7 +86,7 @@ func AddResult(voterID, electionID, info1, info2, option string, coerced bool, d
 		// update voter (hasVoted = true)
 		_, err = db.Collection("voter").UpdateOne(context.Background(),
 			bson.M{"_id": u},
-			bson.M{"$set": bson.M{"hasVoted": true}})
+			bson.M{"$set": bson.M{"hasVoted": !coerced}})
 
 		if err != nil {
 			return err
@@ -109,7 +109,29 @@ func AddResult(voterID, electionID, info1, info2, option string, coerced bool, d
 
 // GetOneResult returns a result of the corresponding voter
 func GetOneResult(electionID, username, safeword string, dbc *mongo.Client) ([]Result, error) {
-	return nil, nil
+	e, _ := primitive.ObjectIDFromHex(electionID)
+	voter := fmt.Sprintf("%x", md5.Sum([]byte(username+safeword)))
+
+	cur, err := dbc.Database("aye-go").Collection("election").Aggregate(context.Background(), []bson.M{
+		bson.M{"$match": bson.M{"_id": e}},                                            // election
+		bson.M{"$unwind": bson.M{"path": "$result"}},                                  // separate array of results
+		bson.M{"$match": bson.M{"result.identifier": voter}},                          // find result matching username+safeword identifier
+		bson.M{"$group": bson.M{"_id": "$_id", "result": bson.M{"$push": "$result"}}}, // regroup array
+	})
+	if err != nil {
+		return []Result{}, err
+	}
+
+	r := results{}
+	for cur.Next(context.Background()) {
+		cur.Decode(&r)
+	}
+
+	cur.Close(context.Background())
+	if err := cur.Err(); err != nil {
+		return []Result{}, err
+	}
+	return r.Result, nil
 }
 
 // GetResults returns all results for an election
