@@ -164,6 +164,59 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Logged out", http.StatusOK)
 }
 
+func pubRecordHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("static/tmpl/live.html"))
+	req := r.Method == "POST"
+	sd := "To be confirmed"
+	ed := "To be confirmed"
+	started := false
+	if !currentElection.StartDate.IsZero() {
+		if time.Now().After(currentElection.StartDate) {
+			started = true
+		}
+		sd = currentElection.StartDate.Format("2006-01-02")
+		ed = currentElection.EndDate.Format("2006-01-02")
+	}
+	pageData := struct {
+		Started, Requested bool
+		StartDate          string
+		Title              string
+		EndDate            string
+		Results            []data.Result
+	}{
+		Started:   started,
+		Requested: req,
+		StartDate: sd,
+		Title:     currentElection.Title,
+		EndDate:   ed,
+	}
+
+	if req {
+		// get one or all
+		r.ParseForm()
+		if r.FormValue("username") != "" {
+			results, err := data.GetOneResult(currentElection.ID.Hex(), html.EscapeString(r.FormValue("username")), html.EscapeString(r.FormValue("safeword")), mdbClient)
+			if err != nil {
+				fmt.Printf(alert, err)
+				http.Error(w, "Problem occurred", http.StatusTeapot)
+				return
+			}
+			pageData.Results = results
+			goto Execute
+		}
+		results, err := data.GetResults(currentElection.ID.Hex(), mdbClient)
+		if err != nil {
+			fmt.Printf(alert, err)
+			http.Error(w, "Problem occurred", http.StatusTeapot)
+			return
+		}
+		pageData.Results = results
+	}
+Execute:
+	tmpl.Execute(w, pageData)
+
+}
+
 func submitVoteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		r.ParseForm()
@@ -333,7 +386,7 @@ func main() {
 	http.HandleFunc("/admin", adminHandler)
 	http.HandleFunc("/submitvote", submitVoteHandler)
 	http.HandleFunc("/logout", logoutHandler)
-	//http.HandleFunc("/live", pubRecordHandler)
+	http.HandleFunc("/live", pubRecordHandler)
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Aye - Results</title>
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1">-->
+    <!-- <link rel="stylesheet" type="text/css" href="static/css/index.css" /> -->
+    <script src="static/js/results.js"></script>
+</head>
+<body>
+    {{if .Started}}
+        <h2>{{.Title}}</h2>
+        <p>Deadline: {{.EndDate}}</p>
+        <form method="POST" action="/live">
+            <p>To see all results, leave the form empty!</p>
+            Username: <input type="text" name="username"/><br>
+            Safeword: <input type="password" name="safeword"/><br>
+            <input type="submit" value="Search"/>
+        </form>
+        {{if .Requested}}
+            <div class="results">
+                {{$results := .Results}}
+                {{range $r := $results }}
+                    <p>{{$r.Identifier}} | {{$r.Option}}</p>
+                {{end}}
+            </div>
+        {{end}}
+    {{else}}
+        <p>Start Date: {{.StartDate}}</p>
+    {{end}}
+</body>
+</html>
