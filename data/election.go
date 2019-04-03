@@ -199,7 +199,7 @@ func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.
 			return err
 		}
 		if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
-			e = Election{ID: &oid, Title: title, StartDate: sdp, EndDate: edp}
+			e = Election{ID: &oid, Title: title, StartDate: sdp, EndDate: edp, Options: opts}
 		}
 		return nil
 	})
