@@ -27,6 +27,18 @@ type results struct {
 	Result []Result
 }
 
+type allResults struct {
+	ID     *primitive.ObjectID `bson:"_id,omitempty"`
+	Result []FullResult
+}
+
+//FullResult models individual results being returned including information on coerced
+type FullResult struct {
+	Identifier string `bson:"identifier"`
+	Option     string `bson:"option"`
+	Coerced    bool   `bson:"coerced"`
+}
+
 // Result models a single result when being returned for use
 type Result struct {
 	Identifier string `bson:"identifier"`
@@ -159,6 +171,18 @@ func GetResults(electionID string, dbc *mongo.Client) ([]Result, error) {
 	}
 
 	return r.Result, nil
+}
+
+// GetAllResults returns all results for an election including all information
+func GetAllResults(electionID string, dbc *mongo.Client) ([]FullResult, error) {
+	e, _ := primitive.ObjectIDFromHex(electionID)
+
+	res := allResults{}
+	err := dbc.Database("aye-go").Collection("election").FindOne(context.Background(), bson.M{"_id": e}).Decode(&res)
+	if err != nil {
+		return []FullResult{}, err
+	}
+	return res.Result, nil
 }
 
 // CreateElection parses form input and adds to the database

@@ -144,20 +144,54 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 
 			// prevent form submission if currentElection populated and Now < enddate
 			disabled := ""
+			ended := false
 			if !currentElection.EndDate.IsZero() || !time.Now().After(currentElection.EndDate) {
 				disabled = "disabled"
+			}
+			if !currentElection.EndDate.IsZero() && time.Now().After(currentElection.EndDate) {
+				ended = true
 			}
 			data := struct {
 				Loggedin bool
 				Enabled  string
+				Ended    bool
 			}{
 				true,
 				disabled,
+				ended,
 			}
 			tmpl.Execute(w, data)
 			return
 		}
 	}
+}
+
+func auditHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "cookie-name")
+	if admin, err := data.CheckAdmin(session.Values["id"].(string), mdbClient); !admin || err != nil {
+		http.Error(w, "Problem or not admin", http.StatusTeapot)
+		return
+	}
+
+	res, err := data.GetAllResults(currentElection.ID.Hex(), mdbClient)
+	if err != nil {
+		fmt.Printf(alert, err)
+		http.Error(w, "Problem encountered", http.StatusTeapot)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("static/tmpl/audit.html"))
+	data := struct {
+		Title   string
+		Options string
+		Results []data.FullResult
+	}{
+		Title:   currentElection.Title,
+		Options: strings.Join(currentElection.Options, ", "),
+		Results: res,
+	}
+	tmpl.Execute(w, data)
+	return
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -387,6 +421,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/admin", adminHandler)
+	http.HandleFunc("/audit", auditHandler)
 	http.HandleFunc("/submitvote", submitVoteHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/live", pubRecordHandler)

@@ -25,7 +25,11 @@
             Username: <input type="text" name="username"/><br>
             Password: <input type="password" name="password"/><br>
         {{end}}
-        <input type="submit" value="Submit" {{.Enabled}}/>
+        <input type="submit" value="Submit" {{.Enabled}}/><br>
     </form>
+    {{if .Ended}}
+    <input type="submit" value="Audit" onclick="window.location='/audit';" /> 
+    {{end}}
+        <!-- <input type="submit" value="Audit" formaction="/audit"/><br> -->
 </body>
 </html>
