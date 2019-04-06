@@ -15,6 +15,7 @@ import (
 
 	"github.com/aagoldingay/aye-go/data"
 	"github.com/gorilla/sessions"
+	"github.com/kabukky/httpscerts"
 
 	utils "github.com/aagoldingay/aye-go/utilities"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -335,6 +336,17 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// generate test certificate
+	err := httpscerts.Check("cert.pem", "key.pem")
+	if err != nil {
+		err = httpscerts.Generate("cert.pem", "key.pem", "127.0.0.1:8080")
+		if err != nil {
+			fmt.Printf(alert, err)
+			os.Exit(1)
+		}
+	}
+	// end generate test certificate
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -391,8 +403,9 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/live", pubRecordHandler)
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))
-		os.Exit(1)
-	}
+	// if err := http.ListenAndServe(":8080", nil); err != nil {
+	// 	fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))
+	// 	os.Exit(1)
+	// }
+	http.ListenAndServeTLS(":8080", "cert.pem", "key.pem", nil)
 }
