@@ -285,8 +285,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			tmpl.Execute(w, data)
 		} else {
 			session, _ := store.Get(r, "cookie-name")
-			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
-				html.EscapeString(r.FormValue("password")), mdbClient)
+			resp, err := data.LoginVoter(currentElection.ID.Hex(), html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), html.EscapeString(r.FormValue("safeword")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
@@ -294,9 +294,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
+				return
 			}
 			if resp.HasVoted {
 				http.Error(w, "Already voted", http.StatusTeapot)
+				return
 			}
 
 			session.Values["id"] = resp.ID

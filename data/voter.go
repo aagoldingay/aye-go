@@ -63,7 +63,7 @@ func CheckVoter(userID, safeword string, dbc *mongo.Client) (VoterVote, error) {
 }
 
 // LoginVoter checks that a user has an account
-func LoginVoter(username, password string, dbc *mongo.Client) (VoterLogin, error) {
+func LoginVoter(electionID, username, password, safeword string, dbc *mongo.Client) (VoterLogin, error) {
 	result := voter{}
 	err := dbc.Database("aye-go").Collection("voter").
 		FindOne(context.Background(), bson.M{"username": username}).Decode(&result)
@@ -73,6 +73,16 @@ func LoginVoter(username, password string, dbc *mongo.Client) (VoterLogin, error
 	hashpass := md5.Sum([]byte(password + result.Hash))
 	if result.Password != fmt.Sprintf("%x", hashpass) {
 		return VoterLogin{false, false, ""}, nil
+	}
+
+	if !result.HasVoted { // check safeword
+		res, err := GetOneResult(electionID, username, safeword, dbc)
+		if err != nil {
+			return VoterLogin{false, false, ""}, nil
+		}
+		if len(res) > 0 { //username+safeword has been used - "has voted" (was coerced, so fake thiss)
+			result.HasVoted = true
+		}
 	}
 	return VoterLogin{true, result.HasVoted, result.ID.Hex()}, nil
 }
