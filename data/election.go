@@ -18,6 +18,7 @@ type Election struct {
 	ID                 *primitive.ObjectID `bson:"_id,omitempty"`
 	Title              string
 	StartDate, EndDate time.Time
+	CoercionRes        bool `bson:"coercion"`
 	Options            []string
 }
 
@@ -46,11 +47,12 @@ type Result struct {
 }
 
 type election struct {
-	ID        *primitive.ObjectID `bson:"_id,omitempty"`
-	Title     string              `bson:"title"`
-	StartDate int64               `bson:"start-date"`
-	EndDate   int64               `bson:"end-date"`
-	Options   []string            `bson:"options"`
+	ID          *primitive.ObjectID `bson:"_id,omitempty"`
+	Title       string              `bson:"title"`
+	StartDate   int64               `bson:"start-date"`
+	EndDate     int64               `bson:"end-date"`
+	CoercionRes bool                `bson:"coercion"`
+	Options     []string            `bson:"options"`
 }
 
 type result struct {
@@ -186,7 +188,7 @@ func GetAllResults(electionID string, dbc *mongo.Client) ([]FullResult, error) {
 }
 
 // CreateElection parses form input and adds to the database
-func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.Client) (Election, error) {
+func CreateElection(title, startdate, enddate string, opts []string, coercion bool, dbc *mongo.Client) (Election, error) {
 	// parse dates
 	sdp, _ := time.Parse("2006-01-02", startdate)
 	sd := sdp.Unix()
@@ -197,6 +199,7 @@ func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.
 	doc := bson.D{{Key: "title", Value: title},
 		{Key: "start-date", Value: sd},
 		{Key: "end-date", Value: ed},
+		{Key: "coercion", Value: coercion},
 		{Key: "options", Value: opts}}
 
 	var e Election
@@ -223,7 +226,7 @@ func CreateElection(title, startdate, enddate string, opts []string, dbc *mongo.
 			return err
 		}
 		if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
-			e = Election{ID: &oid, Title: title, StartDate: sdp, EndDate: edp, Options: opts}
+			e = Election{ID: &oid, Title: title, StartDate: sdp, EndDate: edp, CoercionRes: coercion, Options: opts}
 		}
 		return nil
 	})
@@ -251,6 +254,7 @@ func GetCurrentElection(dbc *mongo.Client) (Election, error) {
 	}
 
 	return Election{ID: res.ID, Title: res.Title,
-		StartDate: time.Unix(res.StartDate, 0),
-		EndDate:   time.Unix(res.EndDate, 0), Options: res.Options}, nil
+		StartDate:   time.Unix(res.StartDate, 0),
+		EndDate:     time.Unix(res.EndDate, 0),
+		CoercionRes: res.CoercionRes, Options: res.Options}, nil
 }

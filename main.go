@@ -15,6 +15,7 @@ import (
 
 	"github.com/aagoldingay/aye-go/data"
 	"github.com/gorilla/sessions"
+	"github.com/kabukky/httpscerts"
 
 	utils "github.com/aagoldingay/aye-go/utilities"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -101,7 +102,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Problem or not admin", http.StatusTeapot)
 				return
 			}
-
+			enableCoercion := utils.ConvertCheckbox(r.FormValue("coercion"))
 			t := html.EscapeString(r.FormValue("title"))
 			numOpts, _ := strconv.ParseInt(r.FormValue("numOptions"), 10, 32)
 			opts := []string{}
@@ -111,7 +112,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			sd := r.FormValue("startdate")
 			ed := r.FormValue("enddate")
-			e, err := data.CreateElection(t, sd, ed, opts, mdbClient)
+			e, err := data.CreateElection(t, sd, ed, opts, enableCoercion, mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem creating new election", http.StatusTeapot)
@@ -274,9 +275,7 @@ func submitVoteHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No authorisation", http.StatusTeapot)
 			return
 		}
-		// fmt.Println(voter.Coerced)
-		// http.Error(w, "got this far", http.StatusTeapot)
-		// return
+
 		ok, err := data.AddResult(session.Values["id"].(string), currentElection.ID.Hex(), r.FormValue("username"), r.FormValue("safeword"), r.FormValue("option"), voter.Coerced, mdbClient)
 		if err != nil {
 			fmt.Printf(alert, err)
@@ -320,8 +319,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			tmpl.Execute(w, data)
 		} else {
 			session, _ := store.Get(r, "cookie-name")
-			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
-				html.EscapeString(r.FormValue("password")), mdbClient)
+			resp, err := data.LoginVoter(currentElection.ID.Hex(), html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), html.EscapeString(r.FormValue("safeword")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
@@ -329,9 +328,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
+				return
 			}
 			if resp.HasVoted {
 				http.Error(w, "Already voted", http.StatusTeapot)
+				return
 			}
 
 			session.Values["id"] = resp.ID
@@ -369,6 +370,17 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// generate test certificate
+	err := httpscerts.Check("cert.pem", "key.pem")
+	if err != nil {
+		err = httpscerts.Generate("cert.pem", "key.pem", "127.0.0.1:8080")
+		if err != nil {
+			fmt.Printf(alert, err)
+			os.Exit(1)
+		}
+	}
+	// end generate test certificate
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -426,8 +438,9 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/live", pubRecordHandler)
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))
-		os.Exit(1)
-	}
+	// if err := http.ListenAndServe(":8080", nil); err != nil {
+	// 	fmt.Printf(alert, fmt.Sprintf("failed to serve: %v", err))
+	// 	os.Exit(1)
+	// }
+	http.ListenAndServeTLS(":8080", "cert.pem", "key.pem", nil)
 }
