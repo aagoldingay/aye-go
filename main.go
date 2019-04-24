@@ -102,7 +102,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Problem or not admin", http.StatusTeapot)
 				return
 			}
-
+			enableCoercion := utils.ConvertCheckbox(r.FormValue("coercion"))
 			t := html.EscapeString(r.FormValue("title"))
 			numOpts, _ := strconv.ParseInt(r.FormValue("numOptions"), 10, 32)
 			opts := []string{}
@@ -112,7 +112,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			sd := r.FormValue("startdate")
 			ed := r.FormValue("enddate")
-			e, err := data.CreateElection(t, sd, ed, opts, mdbClient)
+			e, err := data.CreateElection(t, sd, ed, opts, enableCoercion, mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem creating new election", http.StatusTeapot)
@@ -241,9 +241,7 @@ func submitVoteHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No authorisation", http.StatusTeapot)
 			return
 		}
-		// fmt.Println(voter.Coerced)
-		// http.Error(w, "got this far", http.StatusTeapot)
-		// return
+
 		ok, err := data.AddResult(session.Values["id"].(string), currentElection.ID.Hex(), r.FormValue("username"), r.FormValue("safeword"), r.FormValue("option"), voter.Coerced, mdbClient)
 		if err != nil {
 			fmt.Printf(alert, err)
@@ -287,8 +285,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			tmpl.Execute(w, data)
 		} else {
 			session, _ := store.Get(r, "cookie-name")
-			resp, err := data.LoginVoter(html.EscapeString(r.FormValue("username")),
-				html.EscapeString(r.FormValue("password")), mdbClient)
+			resp, err := data.LoginVoter(currentElection.ID.Hex(), html.EscapeString(r.FormValue("username")),
+				html.EscapeString(r.FormValue("password")), html.EscapeString(r.FormValue("safeword")), mdbClient)
 			if err != nil {
 				fmt.Printf(alert, err)
 				http.Error(w, "Problem occurred", http.StatusTeapot)
@@ -296,9 +294,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if !resp.Success {
 				http.Error(w, "Unsuccessful login", http.StatusTeapot)
+				return
 			}
 			if resp.HasVoted {
 				http.Error(w, "Already voted", http.StatusTeapot)
+				return
 			}
 
 			session.Values["id"] = resp.ID
