@@ -27,12 +27,13 @@ function generateShortID(size) {
 }
 
 function register() {
-    var partSize = 5;
-    var code = generateID(3, partSize);
+    //var partSize = 5;
+    //var code = generateID(3, partSize);
     var frm = document.getElementById("form")
     frm.setAttribute("onsubmit", "return preSubmit();")
-    frm.innerHTML = "<p>Sign up if the code below matches the integration</p>" 
-        + "<p>" + code + "</p>" 
+    frm.innerHTML = "<div class=\"apikey\">"
+        + "Integration ID:  <input type=\"text\" name=\"part-1\" maxlength=\"5\" size=\"5\" required> - <input type=\"text\" name=\"part-2\" maxlength=\"5\" size=\"5\" required> - <input type=\"text\" name=\"part-1\" maxlength=\"5\" size=\"5\" required>"
+        + "</div>" 
         + "Username (remember this): <input type=\"text\" name=\"username\" value=\"" + generateShortID(8) + "\" readonly/><br>"
         + "Password: <input type=\"password\" name=\"password\"/><br>"
         + "Confirm Password: <input type=\"password\" name=\"confirmpassword\"/><br>"
