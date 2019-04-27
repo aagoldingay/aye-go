@@ -5,27 +5,36 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Aye - Admin</title>
     <!--<meta name="viewport" content="width=device-width, initial-scale=1">-->
-    <!-- <link rel="stylesheet" type="text/css" href="static/css/index.css" /> -->
-    <!-- <script src="static/js/electionSetup.js"></script> -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="static/css/main.css">
 </head>
 <body>
     {{$os := .Options}}
     {{if .Started}}
-        <h2>{{.Title}}</h2>
-        <p>Deadline: {{.EndDate}}</p>
-        <form method="POST" action="/submitvote">
-            <input type="hidden" name="election" value="{{.ID}}"/>
-            <div class="options">
-                {{range $o := $os}}
-                <input type="radio" name="option" value="{{$o}}">{{$o}}<br>
-                {{end}}
+    <h1>{{.Title}}</h1>
+    <h5>Deadline: {{.EndDate}}</h5>
+    <form method="POST" action="/submitvote">
+        <input type="hidden" name="election" value="{{.ID}}"/>
+        <div class="options" class="form-check">
+            {{range $o := $os}}
+            <div class="form-check">
+                <input type="radio" class="form-check-input" name="option" value="{{$o}}">
+                <label class="form-check-label">{{$o}}</label>
             </div>
-            Username: <input type="text" name="username"/><br>
-            Safeword: <input type="password" name="safeword"/><br>
-            <input type="submit" valu="Submit"/>
+            {{end}}
+        </div>
+        <div class="form-group w-25">
+            <label> Username: </label>
+            <input type="text" class="form-control" name="username"/>
+        </div>
+        <div class="form-group w-25">
+            <label> Safeword: </label>
+            <input type="password" class="form-control" name="safeword"/>
+        </div>
+        <input type="submit" class="btn btn-success btn-lg active" aria-pressed="true" value="Submit"/>
         </form>
     {{else}}
-        <p>Start Date: {{.StartDate}}</p>
+    <h5>Start Date: {{.StartDate}}</h5>
     {{end}}
 </body>
 </html>

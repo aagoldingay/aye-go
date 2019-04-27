@@ -4,15 +4,27 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Aye - Register</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="static/css/main.css">
     <script src="static/js/register.js"></script>
 </head>
 <body>
-    <h1>Aye</h1>
+    <h1 class="display-3">Aye</h1>
     <form id="form" action="/" method="POST">
-        Username: <input type="text" name="username"/><br>
-        Password: <input type="password" name="password"/><br>
-        Safeword: <input type="password" name="safeword"/><br>
-        <input type="submit" value="Go"/><br>
+      <div class="form-group w-25">
+        <label>Username:</label>
+        <input type="text" class="form-control" name="username"/>
+      </div>
+      <div class="form-group w-25">
+        <label>Password:</label>
+        <input type="password" class="form-control" name="password"/>
+      </div>
+      <div class="form-group w-25">
+        <label>Safeword:</label>
+        <input type="password" class="form-control" name="safeword"/>
+      </div>
+        <input type="submit" class="btn btn-success btn-lg active" aria-pressed="true" value="Go"/><br>
+        <br>
         <a href="javascript:register();">Register to Vote</a>
     </form>
 </body>
